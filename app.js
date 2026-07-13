@@ -499,6 +499,7 @@ let bojCache = { items: [], count: 0 };
 const SOLVEDAC_ROUTES = [
   (qs) => `https://solved.ac/api/v3/search/problem?${qs}`,
   (qs) => `/api/solvedac/v3/search/problem?${qs}`,
+  (qs) => `https://corsproxy.io/?url=${encodeURIComponent(`https://solved.ac/api/v3/search/problem?${qs}`)}`,
   (qs) => `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://solved.ac/api/v3/search/problem?${qs}`)}`,
 ];
 let bojRouteIdx = null; // 성공한 경로 기억
