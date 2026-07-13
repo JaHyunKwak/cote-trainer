@@ -26,7 +26,7 @@
   <aside id="problem-list">
     <div id="mode-toggle" role="tablist">
       <button id="mode-local" class="active" role="tab">내 문제</button>
-      <button id="mode-boj" role="tab">백준 실전</button>
+      <button id="mode-boj" role="tab">실전 Kit</button>
     </div>
     <div id="filters">
       <select id="f-diff" aria-label="난이도 필터">
@@ -44,40 +44,19 @@
     </div>
     <ul id="plist"></ul>
     <div id="boj-panel" class="hidden">
+      <p class="hint" style="margin:0 0 8px">프로그래머스 고득점 Kit — 클릭하면 프로그래머스에서 풀고, 체크로 기록</p>
       <div id="boj-filters">
-        <div class="row-2">
-          <select id="boj-t1" aria-label="최소 티어">
-            <option value="b5">브론즈 5</option><option value="b3">브론즈 3</option>
-            <option value="b1">브론즈 1</option><option value="s5" selected>실버 5</option>
-            <option value="s3">실버 3</option><option value="s1">실버 1</option>
-            <option value="g5">골드 5</option><option value="g3">골드 3</option>
-          </select>
-          <select id="boj-t2" aria-label="최대 티어">
-            <option value="b1">브론즈 1</option><option value="s3" selected>실버 3</option>
-            <option value="s1">실버 1</option><option value="g5">골드 5</option>
-            <option value="g3">골드 3</option><option value="g1">골드 1</option>
-            <option value="p5">플래 5</option>
-          </select>
-        </div>
-        <select id="boj-tag" aria-label="태그">
-          <option value="">태그 전체</option>
-          <option value="implementation">구현</option>
-          <option value="sorting">정렬</option>
-          <option value="hashing">해시</option>
-          <option value="bruteforcing">완전탐색</option>
-          <option value="greedy">그리디</option>
-          <option value="bfs">BFS</option>
-          <option value="dfs">DFS</option>
-          <option value="binary_search">이분탐색</option>
-          <option value="dp">DP</option>
-          <option value="graphs">그래프</option>
-          <option value="data_structures">자료구조</option>
-          <option value="string">문자열</option>
-          <option value="two_pointer">투포인터</option>
-          <option value="simulation">시뮬레이션</option>
+        <select id="prog-cat" aria-label="유형">
+          <option value="">유형 전체</option>
+        </select>
+        <select id="prog-level" aria-label="레벨">
+          <option value="">레벨 전체</option>
+          <option value="1">Level 1</option>
+          <option value="2">Level 2</option>
+          <option value="3">Level 3</option>
+          <option value="4">Level 4+</option>
         </select>
         <label><input type="checkbox" id="boj-unsolved"> 안 푼 문제만</label>
-        <button id="boj-search">문제 찾기</button>
       </div>
       <p id="boj-status" class="hint"></p>
       <ul id="boj-list"></ul>
@@ -153,6 +132,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.5/purify.min.js"></script>
 <script src="problems.js"></script>
+<script src="kit.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

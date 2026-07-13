@@ -62,10 +62,16 @@ main { flex: 1; display: flex; overflow: hidden; min-height: 0; position: relati
 #boj-list li.boj-done a { color: #6a7180; text-decoration: line-through; }
 #boj-list li.empty { color: #8a919e; }
 .boj-check { padding-top: 1px; }
-.t-bronze { background: #4a2f1d; color: #d8a17f; }
-.t-silver { background: #2f3a45; color: #a8bccb; }
-.t-gold   { background: #4a3a10; color: #ecc94b; }
-.t-plat   { background: #14443a; color: #59e0c1; }
+.l1 { background: #1d4a2f; color: #7fd89a; }
+.l2 { background: #2c3a4a; color: #7fb6d8; }
+.l3 { background: #4a3a1d; color: #e5c07b; }
+.l4, .l5 { background: #4a1d1d; color: #e06c75; }
+.prog-cat {
+  color: #8a919e; font-size: 12px; font-weight: 700;
+  margin-top: 8px; padding: 4px 6px 2px; border-bottom: 1px solid #2c313a;
+  cursor: default;
+}
+#boj-list li.prog-cat:hover { background: none; }
 #list-backdrop { display: none; }
 #filters { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; font-size: 12px; }
 #filters select {

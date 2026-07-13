@@ -370,7 +370,7 @@ function openRecords() {
   const subs = store.subs();
   const solved = store.solved();
   $("#rec-stats").textContent =
-    `내 문제 해결 ${solved.size}/${PROBLEMS.length} · 제출 ${subs.length}회 · 백준 체크 ${Object.keys(store.boj()).length}개 (이 기기 기준)`;
+    `내 문제 해결 ${solved.size}/${PROBLEMS.length} · 제출 ${subs.length}회 · 실전 Kit ${Object.keys(store.boj()).length}개 (이 기기 기준)`;
   const g = store.gist();
   $("#gist-token").value = g.token || "";
   $("#gist-id").value = g.gistId || "";
@@ -452,86 +452,82 @@ async function gistSync() {
   }
 }
 
-/* ── 백준 실전 모드 (solved.ac) ────────────────────── */
-const TIER_NAMES = ["U", "B5","B4","B3","B2","B1", "S5","S4","S3","S2","S1",
-  "G5","G4","G3","G2","G1", "P5","P4","P3","P2","P1", "D5","D4","D3","D2","D1",
-  "R5","R4","R3","R2","R1"];
-const tierClass = (lv) => lv >= 16 ? "t-plat" : lv >= 11 ? "t-gold" : lv >= 6 ? "t-silver" : "t-bronze";
-
+/* ── 실전 모드 (프로그래머스 고득점 Kit) ────────────
+   백준(BOJ)이 2026-04-28 서비스를 종료해 프로그래머스 Kit으로 교체. */
 function setMode(mode) {
-  const boj = mode === "boj";
-  $("#mode-local").classList.toggle("active", !boj);
-  $("#mode-boj").classList.toggle("active", boj);
-  $("#filters").classList.toggle("hidden", boj);
-  $("#plist").classList.toggle("hidden", boj);
-  $("#boj-panel").classList.toggle("hidden", !boj);
-  if (boj && !$("#boj-list").children.length) bojSearch();
+  const prog = mode === "boj";
+  $("#mode-local").classList.toggle("active", !prog);
+  $("#mode-boj").classList.toggle("active", prog);
+  $("#filters").classList.toggle("hidden", prog);
+  $("#plist").classList.toggle("hidden", prog);
+  $("#boj-panel").classList.toggle("hidden", !prog);
+  if (prog) renderProgList();
 }
 
-function renderBojList(items, count) {
+function initProgFilters() {
+  const sel = $("#prog-cat");
+  for (const cat of Object.keys(PROGRAMMERS_KIT)) {
+    const o = document.createElement("option");
+    o.value = cat; o.textContent = cat;
+    sel.appendChild(o);
+  }
+}
+
+function renderProgList() {
   const solved = store.boj();
+  const catF = $("#prog-cat").value;
+  const lvF = $("#prog-level").value;
   const unsolvedOnly = $("#boj-unsolved").checked;
   const ul = $("#boj-list");
   ul.innerHTML = "";
-  const shown = items.filter((it) => !unsolvedOnly || !solved[it.problemId]);
-  $("#boj-status").textContent =
-    `${count}문제 중 상위 ${shown.length}개 (많이 푼 순) — 클릭하면 백준으로`;
-  for (const it of shown) {
-    const li = document.createElement("li");
-    const done = !!solved[it.problemId];
-    li.className = done ? "boj-done" : "";
-    li.innerHTML =
-      `<label class="boj-check"><input type="checkbox" ${done ? "checked" : ""}></label>` +
-      `<a href="https://www.acmicpc.net/problem/${Number(it.problemId)}" target="_blank" rel="noopener">` +
-      `<span class="badge ${tierClass(it.level)}">${TIER_NAMES[it.level] || "?"}</span>` +
-      `${escapeHtml(it.titleKo)} <small>${Number(it.acceptedUserCount).toLocaleString()}명 해결</small></a>`;
-    li.querySelector("input").onchange = () => {
-      store.toggleBoj(it.problemId);
-      li.classList.toggle("boj-done");
-    };
-    ul.appendChild(li);
+  let total = 0, done = 0, shown = 0;
+  for (const [cat, items] of Object.entries(PROGRAMMERS_KIT)) {
+    if (catF && cat !== catF) continue;
+    const filtered = items.filter((it) =>
+      (!lvF || (lvF === "4" ? it.level >= 4 : it.level === Number(lvF))) &&
+      (!unsolvedOnly || !solved[it.id]));
+    total += items.length;
+    done += items.filter((it) => solved[it.id]).length;
+    if (!filtered.length) continue;
+    const head = document.createElement("li");
+    head.className = "prog-cat";
+    head.textContent = cat;
+    ul.appendChild(head);
+    for (const it of filtered) {
+      shown++;
+      const li = document.createElement("li");
+      const isDone = !!solved[it.id];
+      li.className = isDone ? "boj-done" : "";
+      li.innerHTML =
+        `<label class="boj-check"><input type="checkbox" ${isDone ? "checked" : ""}></label>` +
+        `<a href="${PROG_LESSON_URL(Number(it.id))}" target="_blank" rel="noopener">` +
+        `<span class="badge l${Math.min(it.level, 5)}">L${Number(it.level)}</span>` +
+        `${escapeHtml(it.title)}</a>`;
+      li.querySelector("input").onchange = () => {
+        store.toggleBoj(it.id);
+        li.classList.toggle("boj-done");
+        renderProgStatus();
+      };
+      ul.appendChild(li);
+    }
   }
-  if (!shown.length) ul.innerHTML = `<li class="empty">조건에 맞는 문제가 없습니다</li>`;
+  if (!shown) ul.innerHTML = `<li class="empty">조건에 맞는 문제가 없습니다</li>`;
+  renderProgStatus();
 }
 
-let bojCache = { items: [], count: 0 };
-// 호스팅 환경에 따라 되는 경로가 다름: 직접 호출 → Netlify 프록시 → 공개 CORS 프록시 순으로 시도
-const SOLVEDAC_ROUTES = [
-  (qs) => `https://solved.ac/api/v3/search/problem?${qs}`,
-  (qs) => `/api/solvedac/v3/search/problem?${qs}`,
-  (qs) => `https://corsproxy.io/?url=${encodeURIComponent(`https://solved.ac/api/v3/search/problem?${qs}`)}`,
-  (qs) => `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://solved.ac/api/v3/search/problem?${qs}`)}`,
-];
-let bojRouteIdx = null; // 성공한 경로 기억
-
-async function bojSearch() {
-  const st = $("#boj-status");
-  st.textContent = "검색 중…";
-  const q = `*${$("#boj-t1").value}..${$("#boj-t2").value}` +
-    ($("#boj-tag").value ? ` #${$("#boj-tag").value}` : "");
-  const qs = `query=${encodeURIComponent(q)}&sort=solved&direction=desc&page=1`;
-  const order = bojRouteIdx === null
-    ? SOLVEDAC_ROUTES.map((_, i) => i)
-    : [bojRouteIdx, ...SOLVEDAC_ROUTES.map((_, i) => i).filter((i) => i !== bojRouteIdx)];
-  for (const i of order) {
-    try {
-      const res = await fetch(SOLVEDAC_ROUTES[i](qs));
-      if (!res.ok) continue;
-      const j = await res.json();
-      if (!Array.isArray(j.items)) continue;
-      bojRouteIdx = i;
-      bojCache = { items: j.items, count: j.count || 0 };
-      renderBojList(bojCache.items, bojCache.count);
-      return;
-    } catch { /* 다음 경로 시도 */ }
-  }
-  st.textContent = "검색 실패 — 네트워크를 확인하고 다시 시도하세요";
+function renderProgStatus() {
+  const solved = store.boj();
+  const all = Object.values(PROGRAMMERS_KIT).flat();
+  const done = all.filter((it) => solved[it.id]).length;
+  $("#boj-status").textContent = `고득점 Kit 진행: ${done}/${all.length}문제`;
 }
 
 $("#mode-local").onclick = () => setMode("local");
 $("#mode-boj").onclick = () => setMode("boj");
-$("#boj-search").onclick = bojSearch;
-$("#boj-unsolved").onchange = () => renderBojList(bojCache.items, bojCache.count);
+$("#prog-cat").onchange = renderProgList;
+$("#prog-level").onchange = renderProgList;
+$("#boj-unsolved").onchange = renderProgList;
+initProgFilters();
 
 /* ── 모바일 UI: 탭·드로어·심볼바 ───────────────────── */
 function closeDrawer() {
