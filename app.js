@@ -233,12 +233,61 @@ function openProblem(id) {
   const draft = localStorage.getItem(draftKey(p.id));
   editor.setValue(draft ?? (p.starterCode || ""));
   $("#btn-run").textContent = p.type === "sql" ? "▶ 실행 (미리보기)" : "▶ 실행 (예제)";
+  renderSolutionPane(p);
+  setPaneTab("statement");
 
   closeDrawer();
   setView("problem");
   if (p.type === "algo") pyJudge.ensure().catch(() => {}); // 미리 로드 시작
   setTimeout(() => editor.refresh(), 0);
 }
+
+/* ── 해설·암기 페이지 ─────────────────────────────── */
+function setPaneTab(tab) {
+  const sol = tab === "solution";
+  $("#ptab-statement").classList.toggle("active", !sol);
+  $("#ptab-solution").classList.toggle("active", sol);
+  $("#statement").classList.toggle("hidden", sol);
+  $("#solution").classList.toggle("hidden", !sol);
+}
+
+function refCode(p) {
+  return p.type === "sql" ? p.sqlFixture.solutionQuery : p.referenceSolution;
+}
+
+function renderSolutionPane(p) {
+  const s = SOLUTIONS[p.id];
+  const box = $("#solution");
+  if (!s) { box.innerHTML = "<p class='hint'>이 문제는 해설이 아직 없습니다.</p>"; return; }
+  const md =
+    `#### 이 유형: ${s.pattern}\n**복잡도** ${s.complexity}\n\n` +
+    `##### 왜 이 접근인가\n${s.why}\n\n` +
+    `##### 모범 답안 (주석 포함)\n${s.annotated}\n\n` +
+    `##### 여기서 틀리기 쉽다\n` + s.pitfalls.map((x) => `- ${x}`).join("\n") + `\n\n` +
+    `##### 🔑 이것만은 외우기\n> \`${s.core}\``;
+  box.innerHTML =
+    `<div class="study-guide">공부 순서: ① 해설 읽기 → ② 답안 따라 치기 → ③ 해설 덮고 재현 → ④ 제출로 확인</div>` +
+    DOMPurify.sanitize(marked.parse(md)) +
+    `<div class="study-btns">
+       <button id="btn-copy-sol">② 답안 에디터에 넣기 (따라 치기)</button>
+       <button id="btn-recall">③ 재현 모드 (에디터 비우고 해설 덮기)</button>
+     </div>`;
+  $("#btn-copy-sol").onclick = () => {
+    editor.setValue(refCode(p));
+    if (isMobile()) setView("code");
+    editor.focus();
+  };
+  $("#btn-recall").onclick = () => {
+    editor.setValue(p.starterCode || "");
+    setPaneTab("statement");
+    if (isMobile()) setView("code");
+    editor.focus();
+    $("#status").textContent = "재현 모드 — 안 보고 짜서 제출해 보세요";
+  };
+}
+
+$("#ptab-statement").onclick = () => setPaneTab("statement");
+$("#ptab-solution").onclick = () => setPaneTab("solution");
 
 /* ── 결과 렌더링 ──────────────────────────────────── */
 function renderAlgoResult(result, isSubmit) {

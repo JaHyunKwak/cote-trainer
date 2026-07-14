@@ -67,7 +67,12 @@
   <section id="workspace" class="hidden">
     <div id="statement-pane">
       <div id="prob-meta"></div>
+      <div id="pane-tabs" role="tablist">
+        <button id="ptab-statement" class="active" role="tab">문제</button>
+        <button id="ptab-solution" role="tab">📖 해설·암기</button>
+      </div>
       <div id="statement"></div>
+      <div id="solution" class="hidden"></div>
     </div>
     <div id="editor-pane">
       <div id="editor-toolbar">
@@ -132,6 +137,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.5/purify.min.js"></script>
 <script src="problems.js"></script>
+<script src="solutions.js"></script>
 <script src="kit.js"></script>
 <script src="app.js"></script>
 </body>
