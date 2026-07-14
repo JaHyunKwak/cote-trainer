@@ -260,6 +260,15 @@ function renderConceptSections(p) {
   const g = typeof GUIDE !== "undefined" ? GUIDE[p.id] : null;
   if (!g) return "";
   let h = "";
+  const t = typeof TRACES !== "undefined" ? TRACES[p.id] : null;
+  if (t) {
+    h += `<h5 class="g-h">🖐 예제로 굴려보기 <small>${escapeHtml(t.input || "")}</small></h5>` +
+      `<table class="g-trace"><tbody>`;
+    for (const [step, state] of t.steps) {
+      h += `<tr><td>${escapeHtml(step)}</td><td>${escapeHtml(state)}</td></tr>`;
+    }
+    h += `</tbody></table>`;
+  }
   if (g.concepts?.length) {
     h += `<h5 class="g-h">📚 핵심 개념</h5>`;
     for (const [name, desc] of g.concepts) {
@@ -271,8 +280,11 @@ function renderConceptSections(p) {
     for (const k of g.funcs) {
       const f = FUNC_DICT[k];
       if (!f) continue;
+      const fi = typeof FUNC_INTUIT !== "undefined" ? FUNC_INTUIT[k] : null;
       h += `<details class="g-func"><summary><b>${escapeHtml(f.name)}</b>` +
         `<code>${escapeHtml(f.sig)}</code></summary>` +
+        (fi?.ana ? `<p class="g-ana">💬 비유하면: ${escapeHtml(fi.ana)}</p>` : "") +
+        (fi?.io ? `<pre class="g-io">${escapeHtml(fi.io)}</pre>` : "") +
         `<p><b>무엇이 들어가고 나오나</b> — ${escapeHtml(f.what)}</p>` +
         `<p><b>언제 쓰나</b> — ${escapeHtml(f.when)}</p>` +
         `<pre class="g-ex">${escapeHtml(f.ex)}</pre></details>`;
