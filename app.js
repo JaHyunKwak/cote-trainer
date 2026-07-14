@@ -255,6 +255,32 @@ function refCode(p) {
   return p.type === "sql" ? p.sqlFixture.solutionQuery : p.referenceSolution;
 }
 
+// 개념·함수 사전 섹션 (guide.js의 GUIDE/FUNC_DICT 사용)
+function renderConceptSections(p) {
+  const g = typeof GUIDE !== "undefined" ? GUIDE[p.id] : null;
+  if (!g) return "";
+  let h = "";
+  if (g.concepts?.length) {
+    h += `<h5 class="g-h">📚 핵심 개념</h5>`;
+    for (const [name, desc] of g.concepts) {
+      h += `<div class="g-concept"><b>${escapeHtml(name)}</b><p>${escapeHtml(desc)}</p></div>`;
+    }
+  }
+  if (g.funcs?.length) {
+    h += `<h5 class="g-h">🔧 사용 함수·문법 사전 <small>(하나하나 뜯어보기)</small></h5>`;
+    for (const k of g.funcs) {
+      const f = FUNC_DICT[k];
+      if (!f) continue;
+      h += `<details class="g-func"><summary><b>${escapeHtml(f.name)}</b>` +
+        `<code>${escapeHtml(f.sig)}</code></summary>` +
+        `<p><b>무엇이 들어가고 나오나</b> — ${escapeHtml(f.what)}</p>` +
+        `<p><b>언제 쓰나</b> — ${escapeHtml(f.when)}</p>` +
+        `<pre class="g-ex">${escapeHtml(f.ex)}</pre></details>`;
+    }
+  }
+  return h;
+}
+
 function renderSolutionPane(p) {
   const s = SOLUTIONS[p.id];
   const box = $("#solution");
@@ -266,11 +292,12 @@ function renderSolutionPane(p) {
     `##### 여기서 틀리기 쉽다\n` + s.pitfalls.map((x) => `- ${x}`).join("\n") + `\n\n` +
     `##### 🔑 이것만은 외우기\n> \`${s.core}\``;
   box.innerHTML =
-    `<div class="study-guide">공부 순서: ① 해설 읽기 → ② 답안 따라 치기 → ③ 해설 덮고 재현 → ④ 제출로 확인</div>` +
+    `<div class="study-guide">공부 순서: ① 해설 읽기 → ② 함수 사전으로 부품 이해 → ③ 답안 따라 치기 → ④ 해설 덮고 재현 → ⑤ 제출로 확인</div>` +
     DOMPurify.sanitize(marked.parse(md)) +
+    renderConceptSections(p) +
     `<div class="study-btns">
-       <button id="btn-copy-sol">② 답안 에디터에 넣기 (따라 치기)</button>
-       <button id="btn-recall">③ 재현 모드 (에디터 비우고 해설 덮기)</button>
+       <button id="btn-copy-sol">③ 답안 에디터에 넣기 (따라 치기)</button>
+       <button id="btn-recall">④ 재현 모드 (에디터 비우고 해설 덮기)</button>
      </div>`;
   $("#btn-copy-sol").onclick = () => {
     editor.setValue(refCode(p));
