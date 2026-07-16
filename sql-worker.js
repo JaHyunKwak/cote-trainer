@@ -17,14 +17,27 @@ function runQuery(db, q) {
   return res.length ? res[0] : { columns: [], values: [] };
 }
 
+function stripForCheck(q) {
+  // 문자열 리터럴을 먼저 마스킹해서 'a--b'나 ';' 같은 내부 기호를 오처리하지 않게 한다
+  return q
+    .replace(/'(?:''|[^'])*'/g, "''")
+    .replace(/--[^\n]*/g, " ")
+    .replace(/\/\*[\s\S]*?\*\//g, " ");
+}
+
 function isSelectOnly(q) {
-  const s = q.replace(/--[^\n]*/g, "").replace(/\/\*[\s\S]*?\*\//g, "").trim();
+  const s = stripForCheck(q).trim();
   if (!/^(select|with)\b/i.test(s)) return false;
   // 세미콜론은 끝에 하나만 허용 (다중 구문 차단)
   return !s.replace(/;\s*$/, "").includes(";");
 }
 
-const norm = (v) => (typeof v === "number" && Number.isInteger(v) ? v : v === null ? null : String(v));
+// 부동소수는 소수 6자리 반올림 후 비교 (AVG 등 표현 차이로 인한 오답 오판 방지)
+const norm = (v) => {
+  if (v === null) return null;
+  if (typeof v === "number") return Number.isInteger(v) ? v : Number(v.toFixed(6));
+  return String(v);
+};
 const rowKey = (row) => JSON.stringify(row.map(norm));
 
 function compare(user, sol, orderSensitive) {

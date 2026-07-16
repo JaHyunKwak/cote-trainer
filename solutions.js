@@ -515,4 +515,208 @@ ORDER BY day;
     ],
     core: "SUM(amount) OVER (ORDER BY day) — ORDER BY가 있어야 누적",
   },
+  22: {
+    pattern: "스택 / 깊이 카운터",
+    complexity: "O(N)",
+    why: `괄호 짝은 **가장 최근에 열린 것이 가장 먼저 닫혀야** 하는 구조라 스택이 정석이다.
+그런데 괄호가 한 종류뿐이면 스택에 뭘 담는지는 중요하지 않고 **개수(깊이)만** 중요하다.
+그래서 depth 카운터 하나로 스택을 대신한다: \`(\`에서 +1, \`)\`에서 -1.
+**도중에 음수가 되면**(닫을 게 없는데 닫음) 즉시 실패, **끝났을 때 0이 아니면**(덜 닫힘) 실패.`,
+    annotated: `\`\`\`python
+s = input().strip()
+depth = 0
+ok = True
+for ch in s:
+    depth += 1 if ch == '(' else -1
+    if depth < 0:          # ')('처럼 닫을 게 없는데 닫는 순간
+        ok = False
+        break
+print('YES' if ok and depth == 0 else 'NO')   # 끝에 0 = 전부 짝 맞음
+\`\`\``,
+    pitfalls: [
+      "끝의 depth==0만 보면 ')(' 를 YES로 오판한다 — 도중 음수 검사가 필수",
+      "괄호가 여러 종류면(()[]{}) 카운터로는 안 되고 진짜 스택에 담아야 한다",
+    ],
+    core: "여는 것 +1, 닫는 것 -1 — 도중 음수 금지, 끝은 0",
+  },
+  23: {
+    pattern: "투 포인터 (슬라이딩 윈도우)",
+    complexity: "O(N)",
+    why: `"조건을 만족하는 **연속 구간** 중 최소/최대"는 투 포인터의 신호다.
+모든 구간을 다 보면 O(N²)이지만, **원소가 전부 양수**라 창을 늘리면 합이 커지고 줄이면 작아지는 단조성이 있다.
+그래서 오른쪽 끝(right)을 한 칸씩 늘리다가, 합이 S 이상이 되면 왼쪽(left)을 최대한 당겨 창을 줄인다.
+두 포인터 모두 앞으로만 가므로 전체 이동은 최대 2N번 — O(N).`,
+    annotated: `\`\`\`python
+best = n + 1                      # '불가능' 표시용 초기값
+left = 0
+cur = 0                           # 현재 창 [left..right]의 합
+for right in range(n):
+    cur += a[right]               # 창을 오른쪽으로 한 칸 확장
+    while cur >= s:               # 조건 만족 → 창을 최대한 줄여본다
+        best = min(best, right - left + 1)
+        cur -= a[left]
+        left += 1
+print(best if best <= n else 0)   # 한 번도 못 만족하면 0
+\`\`\``,
+    pitfalls: [
+      "음수가 섞이면 단조성이 깨져 투 포인터를 못 쓴다 — 이 문제가 '양의 정수'인 이유",
+      "while(not if)로 줄여야 한다 — 한 번만 줄이면 최소 길이를 놓친다",
+    ],
+    core: "for right: 늘리고 → while 조건만족: 기록하고 줄이기",
+  },
+  24: {
+    pattern: "그리디 + 최소 힙 (허프만 합치기)",
+    complexity: "O(N log N)",
+    why: `먼저 합친 파일일수록 이후 합칠 때마다 비용에 반복해서 포함된다.
+그러니 **작은 것부터 합쳐야** 큰 파일이 반복 계산되는 걸 막는다 — 그리디.
+"매번 가장 작은 두 개"를 빠르게 꺼내려면 **최소 힙**: 꺼내기/넣기가 O(log N).
+정렬을 매번 다시 하면 O(N² log N)로 터진다.`,
+    annotated: `\`\`\`python
+import heapq
+h = list(map(int, input().split()))
+heapq.heapify(h)                  # 리스트를 힙 구조로 (O(N))
+total = 0
+while len(h) > 1:                 # 하나 남을 때까지
+    a = heapq.heappop(h)          # 가장 작은 것
+    b = heapq.heappop(h)          # 그다음 작은 것
+    total += a + b                # 합치는 비용
+    heapq.heappush(h, a + b)      # 합쳐진 파일을 다시 후보로
+print(total)
+\`\`\``,
+    pitfalls: [
+      "파이썬 heapq는 최소 힙뿐 — 최대 힙이 필요하면 부호를 뒤집어 넣는다",
+      "N=1이면 while이 아예 안 돌아 0 — 이 경계를 직접 처리하려다 버그 내기 쉽다",
+    ],
+    core: "heapify → 작은 둘 pop → 합을 push, 반복 — '작은 것부터'가 최적",
+  },
+  25: {
+    pattern: "누적합 (Prefix Sum)",
+    complexity: "전처리 O(N) + 질의당 O(1)",
+    why: `질의마다 구간을 직접 더하면 O(N×Q)=100억 — 시간 초과.
+**prefix[i] = 앞에서 i개의 합**을 미리 만들어두면, 어떤 구간이든
+\`prefix[r] - prefix[l-1]\` 뺄셈 한 번으로 나온다. "구간 합을 여러 번 묻는다" = 무조건 누적합.
+prefix를 N+1칸으로 잡고 prefix[0]=0으로 두면 l=1일 때도 예외 없이 같은 식이 된다.`,
+    annotated: `\`\`\`python
+prefix = [0] * (n + 1)            # prefix[0]=0 (아무것도 안 더한 상태)
+for i in range(n):
+    prefix[i + 1] = prefix[i] + a[i]   # 앞 합계 + 현재 원소
+# 질의 (l, r): l번째~r번째 합
+#   = 앞 r개의 합 - 앞 (l-1)개의 합
+out.append(str(prefix[r] - prefix[l - 1]))
+\`\`\``,
+    pitfalls: [
+      "1-indexed 문제를 0-indexed 배열로 받으면서 ±1 실수가 최다 오답 원인",
+      "질의가 10만 개면 print 반복 대신 join 일괄 출력까지가 세트",
+    ],
+    core: "prefix[r] - prefix[l-1] — 구간 합은 뺄셈이다",
+  },
+  26: {
+    pattern: "유니온 파인드 (서로소 집합)",
+    complexity: "거의 O(1) × (M+Q) — 경로 압축 덕분",
+    why: `"연결됐나?"를 반복해서 묻는 문제. BFS로 매 질의마다 탐색하면 O(Q×(N+M))로 터진다.
+유니온 파인드는 각 덩어리에 **대표(뿌리)**를 두고, "같은 덩어리인가?"를 "뿌리가 같은가?"로 바꾼다.
+find(x)는 부모를 따라 뿌리까지 올라가는 함수인데, 올라가면서 **경로를 압축**(부모를 조부모로 교체)하면
+트리가 점점 납작해져 다음 find가 거의 즉시 끝난다.`,
+    annotated: `\`\`\`python
+parent = list(range(n + 1))       # 처음엔 자기 자신이 뿌리
+def find(x):
+    while parent[x] != x:         # 뿌리(자기 자신을 가리킴)까지
+        parent[x] = parent[parent[x]]   # 경로 절반 압축: 부모→조부모
+        x = parent[x]
+    return x
+# union: 두 뿌리가 다르면 한쪽을 다른 쪽 밑으로
+ra, rb = find(a), find(b)
+if ra != rb:
+    parent[rb] = ra
+# 질의: 뿌리가 같으면 같은 네트워크
+out.append('YES' if find(x) == find(y) else 'NO')
+\`\`\``,
+    pitfalls: [
+      "parent[a] = b처럼 원소끼리 이으면 안 된다 — 반드시 '뿌리끼리' 이어야 한다",
+      "경로 압축 없이 체인형 입력을 받으면 find가 O(N)이 돼 시간 초과",
+    ],
+    core: "find = 뿌리 찾기(+압축), union = 뿌리끼리 잇기, 같은가 = 뿌리 비교",
+  },
+  27: {
+    pattern: "다익스트라 (가중치 최단경로)",
+    complexity: "O((N+M) log N)",
+    why: `BFS는 "간선 개수"가 최단일 때만 맞는다. 통행료처럼 **가중치가 다르면** 다익스트라.
+아이디어는 BFS와 같은 확산인데, 큐 대신 **최소 힙**을 써서 "지금까지 비용이 가장 싼 도시부터" 확정해 나간다.
+음수 가중치만 없다면, 힙에서 꺼낸 순간의 비용이 그 도시의 최종 최단 비용임이 보장된다.
+같은 도시가 힙에 여러 번 들어갈 수 있으므로, 꺼냈을 때 이미 더 싼 기록이 있으면 버린다(스킵 규칙).`,
+    annotated: `\`\`\`python
+import heapq
+INF = float('inf')
+dist = [INF] * (n + 1)
+dist[1] = 0
+pq = [(0, 1)]                     # (지금까지 비용, 도시) — 비용이 앞이라 힙이 비용순 정렬
+while pq:
+    d, u = heapq.heappop(pq)      # 현재 가장 싼 후보
+    if d > dist[u]:
+        continue                  # 낡은 기록(이미 더 싸게 도달함) → 버림
+    for c, v in adj[u]:
+        nd = d + c
+        if nd < dist[v]:          # 더 싼 경로 발견
+            dist[v] = nd
+            heapq.heappush(pq, (nd, v))
+print(dist[n] if dist[n] != INF else -1)
+\`\`\``,
+    pitfalls: [
+      "if d > dist[u]: continue 를 빼먹으면 낡은 항목을 다 처리해 시간 초과 위험",
+      "튜플 순서는 (비용, 노드) — 노드를 앞에 두면 힙이 비용순이 아니게 된다",
+      "음수 가중치가 있으면 다익스트라 불가(벨만-포드 영역)",
+    ],
+    core: "힙에 (비용, 노드), 꺼낼 때 낡은 기록 스킵, 더 싸면 갱신 후 push",
+  },
+  28: {
+    pattern: "백트래킹 (재귀 완전탐색)",
+    complexity: "O(2^N) — N ≤ 18이라 최대 26만 갈래",
+    why: `각 원소마다 "고른다/안 고른다" 두 갈래 — 전체 경우는 2^N.
+N이 18이면 26만이라 다 세어도 된다. 이런 "모든 조합을 빠짐없이"는 재귀(DFS)가 가장 자연스럽다:
+i번째 원소에서 두 갈래로 갈라지고, 끝(i==N)에 도달하면 조건을 검사한다.
+반복문으로는 N중 for가 필요한 일을 재귀 하나가 대신하는 것.`,
+    annotated: `\`\`\`python
+count = 0
+def dfs(i, acc, picked):          # i: 몇 번째 원소 차례, acc: 지금까지 합
+    global count                  # 바깥 변수를 고치려면 global 선언
+    if i == n:                    # 모든 원소를 결정했다
+        if picked and acc == t:   # '1개 이상' 조건 + 목표 합
+            count += 1
+        return
+    dfs(i + 1, acc + a[i], True)  # 갈래 1: a[i]를 고른다
+    dfs(i + 1, acc, picked)       # 갈래 2: 안 고른다
+dfs(0, 0, False)
+print(count)
+\`\`\``,
+    pitfalls: [
+      "빈 부분집합(아무것도 안 고름)을 세면 T=0에서 답이 1 많아진다 — picked 플래그가 그 방지책",
+      "음수가 있으면 '합이 넘었으니 중단' 같은 가지치기를 함부로 못 쓴다",
+    ],
+    core: "dfs(i+1, 고른 경우) / dfs(i+1, 안 고른 경우) — 끝에서 검사",
+  },
+  29: {
+    pattern: "문자열 구현 (런 스캔)",
+    complexity: "O(N)",
+    why: `구현 문제는 알고리즘보다 **꼼꼼함** 싸움이다. 같은 문자 구간(런)을 훑는 표준 패턴:
+바깥 i는 런의 시작, 안쪽 j는 같은 문자가 끝나는 지점까지 전진 → 런 길이는 j-i, 다음 런은 i=j부터.
+결과는 문자열 덧붙이기(+=) 대신 리스트에 모아 join — 파이썬 문자열은 불변이라 += 반복은 느리다.`,
+    annotated: `\`\`\`python
+parts = []
+i = 0
+while i < len(s):
+    j = i
+    while j < len(s) and s[j] == s[i]:
+        j += 1                    # 같은 문자가 계속되는 동안 전진
+    run = j - i                   # 이 뭉치의 길이
+    parts.append(s[i] + (str(run) if run > 1 else ''))   # 1이면 숫자 생략
+    i = j                         # 다음 뭉치의 시작으로 점프
+comp = ''.join(parts)
+print(comp if len(comp) < len(s) else s)   # 안 짧아지면 원본
+\`\`\``,
+    pitfalls: [
+      "'길거나 같으면 원본' — 등호 방향을 문제에서 다시 확인 (< vs <=)",
+      "개수 1일 때 숫자 생략 조건을 빼먹으면 abc → a1b1c1로 오답",
+    ],
+    core: "i=런 시작, j=런 끝까지 전진, i=j로 점프 — 런 스캔 패턴",
+  },
 };

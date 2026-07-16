@@ -93,6 +93,33 @@ function genWordsOut() {
   const words = [...set].sort((a, b) => a.length - b.length || (a < b ? -1 : 1));
   return words.join("\n") + "\n";
 }
+function genParenPerfIn() { return "()".repeat(50000) + "\n"; }
+function genTwoPtrPerfIn() { return "100000 50000\n" + Array(100000).fill("1").join(" ") + "\n"; }
+function genHeapPerfIn() { return "100000\n" + Array(100000).fill("1").join(" ") + "\n"; }
+function genPrefixPerfIn() {
+  const qs = [];
+  for (let i = 1; i <= 100000; i++) qs.push(`1 ${i}`);
+  return "100000 100000\n" + Array(100000).fill("1").join(" ") + "\n" + qs.join("\n") + "\n";
+}
+function genPrefixPerfOut() {
+  const L = [];
+  for (let i = 1; i <= 100000; i++) L.push(String(i));
+  return L.join("\n") + "\n";
+}
+function genDsuPerfIn() {
+  const L = ["100000 99999 100000"];
+  for (let i = 1; i < 100000; i++) L.push(`${i} ${i + 1}`);   // 체인으로 전부 연결
+  for (let i = 1; i <= 100000; i++) L.push(`1 ${i}`);          // 질의: 1과 i
+  return L.join("\n") + "\n";
+}
+function genDsuPerfOut() { return "YES\n".repeat(100000); }
+function genDijkstraPerfIn() {
+  const L = ["10000 9999"];
+  for (let i = 1; i < 10000; i++) L.push(`${i} ${i + 1} 1`);   // 일직선 도로
+  return L.join("\n") + "\n";
+}
+function genRlePerfIn() { return "ab".repeat(50000) + "\n"; }
+function genRlePerfOut() { return "ab".repeat(50000) + "\n"; } // 압축이 더 길어서 원본 유지
 
 const ALGO_STARTER = "import sys\ninput = sys.stdin.readline\n\n";
 
@@ -1003,6 +1030,420 @@ wont
         "FROM sales ORDER BY day;",
       orderSensitive: true,
     },
+  },
+  {
+    id: 22,
+    title: "괄호 검사",
+    type: "algo",
+    difficulty: "쉬움",
+    tags: ["스택"],
+    timeLimit: 2.0,
+    statement: `괄호 문자열이 주어진다. 모든 여는 괄호 \`(\`가 순서에 맞게 닫히면 \`YES\`, 아니면 \`NO\`를 출력하라.
+
+**입력**
+- 첫 줄: \`(\`와 \`)\`로만 이루어진 문자열 (길이 1 이상 100,000 이하)
+
+**출력**
+- YES 또는 NO.
+
+**예시 입력**
+\`\`\`
+(())()
+\`\`\`
+**예시 출력**
+\`\`\`
+YES
+\`\`\``,
+    starterCode: ALGO_STARTER + "s = input().strip()\n# 여기에 작성\n",
+    referenceSolution:
+      "s = input().strip()\n" +
+      "depth = 0\n" +
+      "ok = True\n" +
+      "for ch in s:\n" +
+      "    depth += 1 if ch == '(' else -1\n" +
+      "    if depth < 0:\n" +
+      "        ok = False\n" +
+      "        break\n" +
+      "print('YES' if ok and depth == 0 else 'NO')\n",
+    testcases: [
+      { input: "(())()\n", expected: "YES\n", isSample: true },
+      { input: "(\n", expected: "NO\n" },
+      { input: ")(\n", expected: "NO\n" },
+      { input: "()\n", expected: "YES\n" },
+      { input: "((())\n", expected: "NO\n" },
+      { inputGen: genParenPerfIn, expected: "YES\n", label: "성능 (10만 글자)" },
+    ],
+  },
+  {
+    id: 23,
+    title: "최소 구간 길이",
+    type: "algo",
+    difficulty: "중간",
+    tags: ["투포인터"],
+    timeLimit: 2.0,
+    statement: `양의 정수 N개가 주어진다. 연속 구간의 합이 S 이상이 되는 **가장 짧은 구간의 길이**를 출력하라. 그런 구간이 없으면 0.
+
+**입력**
+- 첫 줄: N S (1 ≤ N ≤ 100,000, 1 ≤ S ≤ 10억)
+- 둘째 줄: 양의 정수 N개 (각 10,000 이하)
+
+**출력**
+- 최소 구간 길이 또는 0.
+
+**예시 입력**
+\`\`\`
+10 15
+5 1 3 5 10 7 4 9 2 8
+\`\`\`
+**예시 출력**
+\`\`\`
+2
+\`\`\``,
+    starterCode: ALGO_STARTER + "n, s = map(int, input().split())\na = list(map(int, input().split()))\n# 여기에 작성\n",
+    referenceSolution:
+      "import sys\ninput = sys.stdin.readline\n" +
+      "n, s = map(int, input().split())\n" +
+      "a = list(map(int, input().split()))\n" +
+      "best = n + 1\n" +
+      "left = 0\n" +
+      "cur = 0\n" +
+      "for right in range(n):\n" +
+      "    cur += a[right]\n" +
+      "    while cur >= s:\n" +
+      "        best = min(best, right - left + 1)\n" +
+      "        cur -= a[left]\n" +
+      "        left += 1\n" +
+      "print(best if best <= n else 0)\n",
+    testcases: [
+      { input: "10 15\n5 1 3 5 10 7 4 9 2 8\n", expected: "2\n", isSample: true },
+      { input: "1 5\n5\n", expected: "1\n" },
+      { input: "3 100\n1 2 3\n", expected: "0\n" },
+      { input: "5 11\n1 2 3 4 5\n", expected: "3\n" },
+      { inputGen: genTwoPtrPerfIn, expected: "50000\n", label: "성능 (N=100,000)" },
+    ],
+  },
+  {
+    id: 24,
+    title: "파일 합치기 최소 비용",
+    type: "algo",
+    difficulty: "중간",
+    tags: ["힙"],
+    timeLimit: 2.0,
+    statement: `크기가 제각각인 파일 N개를 하나로 합친다. 한 번에 두 파일만 합칠 수 있고, 비용은 두 파일 크기의 합이다.
+합쳐진 파일도 다시 합칠 수 있다. 전체를 하나로 만드는 **최소 총비용**을 출력하라. 파일이 1개면 0.
+
+**입력**
+- 첫 줄: N (1 ≤ N ≤ 100,000)
+- 둘째 줄: 파일 크기 N개 (각 1 이상 10,000 이하)
+
+**출력**
+- 최소 총비용.
+
+**예시 입력**
+\`\`\`
+4
+10 20 30 40
+\`\`\`
+**예시 출력**
+\`\`\`
+190
+\`\`\``,
+    starterCode: ALGO_STARTER + "import heapq\n\nn = int(input())\nsizes = list(map(int, input().split()))\n# 여기에 작성\n",
+    referenceSolution:
+      "import sys, heapq\ninput = sys.stdin.readline\n" +
+      "n = int(input())\n" +
+      "h = list(map(int, input().split()))\n" +
+      "heapq.heapify(h)\n" +
+      "total = 0\n" +
+      "while len(h) > 1:\n" +
+      "    a = heapq.heappop(h)\n" +
+      "    b = heapq.heappop(h)\n" +
+      "    total += a + b\n" +
+      "    heapq.heappush(h, a + b)\n" +
+      "print(total)\n",
+    testcases: [
+      { input: "4\n10 20 30 40\n", expected: "190\n", isSample: true },
+      { input: "1\n7\n", expected: "0\n" },
+      { input: "2\n3 5\n", expected: "8\n" },
+      { input: "3\n1 1 1\n", expected: "5\n" },
+      { inputGen: genHeapPerfIn, expected: "1668928\n", label: "성능 (N=100,000)" },
+    ],
+  },
+  {
+    id: 25,
+    title: "구간 합 질의",
+    type: "algo",
+    difficulty: "쉬움",
+    tags: ["누적합"],
+    timeLimit: 2.0,
+    statement: `정수 N개와 질의 Q개가 주어진다. 각 질의 \`l r\`에 대해 l번째부터 r번째까지(1번부터 셈)의 합을 출력하라.
+
+**입력**
+- 첫 줄: N Q (1 ≤ N, Q ≤ 100,000)
+- 둘째 줄: 정수 N개 (각 -10,000 이상 10,000 이하)
+- 다음 Q줄: \`l r\` (1 ≤ l ≤ r ≤ N)
+
+**출력**
+- 질의마다 구간 합을 한 줄에 하나씩.
+
+**예시 입력**
+\`\`\`
+5 3
+3 -1 4 1 5
+1 3
+2 5
+3 3
+\`\`\`
+**예시 출력**
+\`\`\`
+6
+9
+4
+\`\`\``,
+    starterCode: ALGO_STARTER + "n, q = map(int, input().split())\na = list(map(int, input().split()))\n# 여기에 작성\n",
+    referenceSolution:
+      "import sys\n" +
+      "data = sys.stdin.buffer.read().split()\n" +
+      "n, q = int(data[0]), int(data[1])\n" +
+      "a = list(map(int, data[2:2 + n]))\n" +
+      "prefix = [0] * (n + 1)\n" +
+      "for i in range(n):\n" +
+      "    prefix[i + 1] = prefix[i] + a[i]\n" +
+      "out = []\n" +
+      "idx = 2 + n\n" +
+      "for _ in range(q):\n" +
+      "    l, r = int(data[idx]), int(data[idx + 1])\n" +
+      "    idx += 2\n" +
+      "    out.append(str(prefix[r] - prefix[l - 1]))\n" +
+      "print('\\n'.join(out))\n",
+    testcases: [
+      { input: "5 3\n3 -1 4 1 5\n1 3\n2 5\n3 3\n", expected: "6\n9\n4\n", isSample: true },
+      { input: "1 1\n-5\n1 1\n", expected: "-5\n" },
+      { input: "3 2\n1 2 3\n1 3\n2 2\n", expected: "6\n2\n" },
+      { inputGen: genPrefixPerfIn, expectedGen: genPrefixPerfOut, label: "성능 (N=Q=100,000)" },
+    ],
+  },
+  {
+    id: 26,
+    title: "같은 네트워크인가",
+    type: "algo",
+    difficulty: "중간",
+    tags: ["유니온파인드"],
+    timeLimit: 2.0,
+    statement: `컴퓨터 N대와 케이블 M개가 주어진다. 질의 Q개에 대해 두 컴퓨터가 케이블을 따라 연결돼 있으면 \`YES\`, 아니면 \`NO\`를 출력하라.
+
+**입력**
+- 첫 줄: N M Q (1 ≤ N ≤ 100,000, 0 ≤ M ≤ 100,000, 1 ≤ Q ≤ 100,000)
+- 다음 M줄: 케이블 \`a b\`
+- 다음 Q줄: 질의 \`x y\`
+
+**출력**
+- 질의마다 YES 또는 NO.
+
+**예시 입력**
+\`\`\`
+5 3 3
+1 2
+2 3
+4 5
+1 3
+1 4
+5 4
+\`\`\`
+**예시 출력**
+\`\`\`
+YES
+NO
+YES
+\`\`\``,
+    starterCode: ALGO_STARTER + "n, m, q = map(int, input().split())\n# 여기에 작성\n",
+    referenceSolution:
+      "import sys\n" +
+      "data = sys.stdin.buffer.read().split()\n" +
+      "n, m, q = int(data[0]), int(data[1]), int(data[2])\n" +
+      "parent = list(range(n + 1))\n" +
+      "def find(x):\n" +
+      "    while parent[x] != x:\n" +
+      "        parent[x] = parent[parent[x]]  # 경로 절반 압축\n" +
+      "        x = parent[x]\n" +
+      "    return x\n" +
+      "idx = 3\n" +
+      "for _ in range(m):\n" +
+      "    a, b = int(data[idx]), int(data[idx + 1])\n" +
+      "    idx += 2\n" +
+      "    ra, rb = find(a), find(b)\n" +
+      "    if ra != rb:\n" +
+      "        parent[rb] = ra\n" +
+      "out = []\n" +
+      "for _ in range(q):\n" +
+      "    x, y = int(data[idx]), int(data[idx + 1])\n" +
+      "    idx += 2\n" +
+      "    out.append('YES' if find(x) == find(y) else 'NO')\n" +
+      "print('\\n'.join(out))\n",
+    testcases: [
+      { input: "5 3 3\n1 2\n2 3\n4 5\n1 3\n1 4\n5 4\n", expected: "YES\nNO\nYES\n", isSample: true },
+      { input: "2 0 1\n1 2\n", expected: "NO\n" },
+      { input: "1 0 1\n1 1\n", expected: "YES\n" },
+      { input: "4 2 2\n1 2\n3 4\n2 1\n2 3\n", expected: "YES\nNO\n" },
+      { inputGen: genDsuPerfIn, expectedGen: genDsuPerfOut, label: "성능 (전부 10만)" },
+    ],
+  },
+  {
+    id: 27,
+    title: "배송 최소 비용",
+    type: "algo",
+    difficulty: "중간",
+    tags: ["다익스트라"],
+    timeLimit: 2.0,
+    statement: `도시 N개와 양방향 도로 M개가 있고, 도로마다 통행료가 있다. 1번 도시에서 N번 도시까지 가는 **최소 통행료 합**을 출력하라. 갈 수 없으면 -1.
+
+**입력**
+- 첫 줄: N M (2 ≤ N ≤ 10,000, 0 ≤ M ≤ 100,000)
+- 다음 M줄: \`a b c\` — a와 b를 잇는 통행료 c의 도로 (1 ≤ c ≤ 10,000)
+
+**출력**
+- 최소 비용 또는 -1.
+
+**예시 입력**
+\`\`\`
+5 6
+1 2 2
+1 3 5
+2 3 1
+2 4 7
+3 5 6
+4 5 3
+\`\`\`
+**예시 출력**
+\`\`\`
+9
+\`\`\``,
+    starterCode: ALGO_STARTER + "import heapq\n\nn, m = map(int, input().split())\n# 여기에 작성\n",
+    referenceSolution:
+      "import sys, heapq\ninput = sys.stdin.readline\n" +
+      "n, m = map(int, input().split())\n" +
+      "adj = [[] for _ in range(n + 1)]\n" +
+      "for _ in range(m):\n" +
+      "    a, b, c = map(int, input().split())\n" +
+      "    adj[a].append((c, b))\n" +
+      "    adj[b].append((c, a))\n" +
+      "INF = float('inf')\n" +
+      "dist = [INF] * (n + 1)\n" +
+      "dist[1] = 0\n" +
+      "pq = [(0, 1)]\n" +
+      "while pq:\n" +
+      "    d, u = heapq.heappop(pq)\n" +
+      "    if d > dist[u]:\n" +
+      "        continue  # 이미 더 싼 경로로 확정된 노드\n" +
+      "    for c, v in adj[u]:\n" +
+      "        nd = d + c\n" +
+      "        if nd < dist[v]:\n" +
+      "            dist[v] = nd\n" +
+      "            heapq.heappush(pq, (nd, v))\n" +
+      "print(dist[n] if dist[n] != INF else -1)\n",
+    testcases: [
+      { input: "5 6\n1 2 2\n1 3 5\n2 3 1\n2 4 7\n3 5 6\n4 5 3\n", expected: "9\n", isSample: true },
+      { input: "2 0\n", expected: "-1\n" },
+      { input: "2 1\n1 2 10\n", expected: "10\n" },
+      { input: "3 3\n1 2 1\n2 3 1\n1 3 5\n", expected: "2\n" },
+      { inputGen: genDijkstraPerfIn, expected: "9999\n", label: "성능 (일직선 1만 도시)" },
+    ],
+  },
+  {
+    id: 28,
+    title: "목표 합 조합의 수",
+    type: "algo",
+    difficulty: "중간",
+    tags: ["백트래킹"],
+    timeLimit: 2.0,
+    statement: `정수 N개 중 **1개 이상**을 골라 합이 정확히 T가 되는 부분집합의 개수를 출력하라.
+
+**입력**
+- 첫 줄: N T (1 ≤ N ≤ 18, -100,000 ≤ T ≤ 100,000)
+- 둘째 줄: 정수 N개 (각 -10,000 이상 10,000 이하)
+
+**출력**
+- 부분집합의 개수.
+
+**예시 입력**
+\`\`\`
+5 0
+-7 -3 -2 5 8
+\`\`\`
+**예시 출력**
+\`\`\`
+1
+\`\`\``,
+    starterCode: ALGO_STARTER + "n, t = map(int, input().split())\na = list(map(int, input().split()))\n# 여기에 작성\n",
+    referenceSolution:
+      "import sys\ninput = sys.stdin.readline\n" +
+      "n, t = map(int, input().split())\n" +
+      "a = list(map(int, input().split()))\n" +
+      "count = 0\n" +
+      "def dfs(i, acc, picked):\n" +
+      "    global count\n" +
+      "    if i == n:\n" +
+      "        if picked and acc == t:\n" +
+      "            count += 1\n" +
+      "        return\n" +
+      "    dfs(i + 1, acc + a[i], True)   # a[i]를 고른다\n" +
+      "    dfs(i + 1, acc, picked)        # 안 고른다\n" +
+      "dfs(0, 0, False)\n" +
+      "print(count)\n",
+    testcases: [
+      { input: "5 0\n-7 -3 -2 5 8\n", expected: "1\n", isSample: true },
+      { input: "1 5\n5\n", expected: "1\n" },
+      { input: "3 0\n0 0 0\n", expected: "7\n" },
+      { input: "4 10\n1 2 3 4\n", expected: "1\n" },
+      { input: "18 9\n1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1\n", expected: "48620\n", label: "성능 (2^18 전수)" },
+    ],
+  },
+  {
+    id: 29,
+    title: "문자 뭉치 압축",
+    type: "algo",
+    difficulty: "쉬움",
+    tags: ["문자열·구현"],
+    timeLimit: 2.0,
+    statement: `문자열에서 같은 문자가 연속되면 \`문자+개수\`로 줄인다(개수가 1이면 숫자 생략).
+예: \`aaabbc\` → \`a3b2c\`. 압축한 결과가 원본보다 **길거나 같으면 원본을 그대로** 출력하라.
+
+**입력**
+- 첫 줄: 영문 소문자 문자열 (길이 1 이상 100,000 이하)
+
+**출력**
+- 압축 결과 또는 원본.
+
+**예시 입력**
+\`\`\`
+aaabbc
+\`\`\`
+**예시 출력**
+\`\`\`
+a3b2c
+\`\`\``,
+    starterCode: ALGO_STARTER + "s = input().strip()\n# 여기에 작성\n",
+    referenceSolution:
+      "s = input().strip()\n" +
+      "parts = []\n" +
+      "i = 0\n" +
+      "while i < len(s):\n" +
+      "    j = i\n" +
+      "    while j < len(s) and s[j] == s[i]:\n" +
+      "        j += 1\n" +
+      "    run = j - i\n" +
+      "    parts.append(s[i] + (str(run) if run > 1 else ''))\n" +
+      "    i = j\n" +
+      "comp = ''.join(parts)\n" +
+      "print(comp if len(comp) < len(s) else s)\n",
+    testcases: [
+      { input: "aaabbc\n", expected: "a3b2c\n", isSample: true },
+      { input: "a\n", expected: "a\n" },
+      { input: "abc\n", expected: "abc\n" },
+      { input: "aaaaaaaaaaaa\n", expected: "a12\n" },
+      { input: "aabb\n", expected: "aabb\n" },
+      { inputGen: genRlePerfIn, expectedGen: genRlePerfOut, label: "성능 (10만 글자)" },
+    ],
   },
 ];
 

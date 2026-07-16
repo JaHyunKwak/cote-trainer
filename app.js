@@ -12,7 +12,7 @@ const VERDICT_LABEL = {
 
 function escapeHtml(s) {
   return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    .replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 const vclass = (v) => (VERDICT_LABEL[v] ? v : "error");
 
@@ -25,7 +25,14 @@ function normalizeOut(text) {
 /* ── 기록 저장 (localStorage) ─────────────────────── */
 const store = {
   subs() { try { return JSON.parse(localStorage.getItem("ct2-subs") || "[]"); } catch { return []; } },
-  saveSubs(v) { localStorage.setItem("ct2-subs", JSON.stringify(v)); },
+  saveSubs(v) {
+    try { localStorage.setItem("ct2-subs", JSON.stringify(v)); }
+    catch (e) {
+      // 저장공간 초과: 오래된 제출 절반을 버리고 재시도
+      try { localStorage.setItem("ct2-subs", JSON.stringify(v.slice(-Math.floor(v.length / 2)))); }
+      catch {}
+    }
+  },
   add(pid, verdict, elapsedMs) {
     const v = this.subs();
     v.push({ pid, verdict, elapsedMs, ts: Date.now() });
@@ -462,8 +469,10 @@ function openRecords() {
   const g = store.gist();
   $("#gist-token").value = g.token || "";
   $("#gist-id").value = g.gistId || "";
+  $("#gist-remember").checked = !!g.token;
   $("#sync-status").textContent = g.lastSync ? `마지막 동기화: ${new Date(g.lastSync).toLocaleString()}` : "";
   $("#records-modal").classList.remove("hidden");
+  setTimeout(() => $("#btn-close-modal").focus(), 0); // 접근성: 열릴 때 포커스 이동
 }
 
 function exportRecords() {
@@ -532,7 +541,10 @@ async function gistSync() {
     const g2 = await res2.json();
     gistId = g2.id;
     $("#gist-id").value = gistId;
-    store.saveGist({ token, gistId, lastSync: Date.now() });
+    store.saveGist({
+      token: $("#gist-remember").checked ? token : "", // 선택제 저장 (기본: 세션 한정)
+      gistId, lastSync: Date.now(),
+    });
     st.textContent = `동기화 완료 — 총 ${store.subs().length}건`;
     openRecordsRefresh();
   } catch (e) {
@@ -646,9 +658,20 @@ $("#f-type").onchange = renderList;
 $("#f-unsolved").onchange = renderList;
 $("#btn-records").onclick = openRecords;
 $("#btn-close-modal").onclick = () => $("#records-modal").classList.add("hidden");
+document.addEventListener("keydown", (e) => { // 접근성: Esc로 모달 닫기
+  if (e.key === "Escape" && !$("#records-modal").classList.contains("hidden")) {
+    $("#records-modal").classList.add("hidden");
+    $("#btn-records").focus();
+  }
+});
 $("#records-modal").onclick = (e) => { if (e.target === $("#records-modal")) $("#records-modal").classList.add("hidden"); };
 $("#btn-export").onclick = exportRecords;
 $("#imp-file").onchange = (e) => { if (e.target.files[0]) importRecords(e.target.files[0]); e.target.value = ""; };
 $("#btn-sync").onclick = gistSync;
 
 renderList();
+
+// 오프라인 캐시 (한 번 접속하면 이후 오프라인에서도 동작)
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("sw.js").catch(() => {});
+}

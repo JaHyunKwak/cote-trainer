@@ -1,26 +1,51 @@
-# 코테 트레이너 (웹 버전)
+# 코테 트레이너 (웹 버전 — 메인)
 
-**https://cote-trainer.netlify.app** — 서버 없이 브라우저 안에서 채점하는 정적 웹앱. PC·핸드폰 어디서든 접속만 하면 됩니다.
+**https://jahyunkwak.github.io/cote-trainer/** — 서버 없이 브라우저 안에서 채점하는 코딩테스트 학습 앱.
+PC·핸드폰 어디서든 접속하면 되고, 한 번 접속한 뒤에는 오프라인에서도 열린다(서비스워커 캐시).
 
-- Python 채점: Pyodide(WebAssembly)를 Web Worker에서 실행. 무한루프는 워커 강제 종료로 방어, 제한 시간은 네이티브 대비 ×3.
-- SQL 채점: sql.js(SQLite WASM). 윈도우 함수 포함, SELECT 단일 쿼리만 허용.
-- 기록: 기기별 localStorage + JSON 내보내기/가져오기 + GitHub Gist 동기화(선택). 우상단 "기록" 버튼.
-- 폰에서는 하단 탭(문제/코드/결과) + 빠른 입력 심볼바. 홈 화면에 추가하면 앱처럼 실행(PWA).
+## 무엇이 들어있나
 
-## 재배포 방법
+- **자작 문제 29개** (알고리즘 23 + SQL 6): 정렬 · 해시 · 완전탐색 · 그리디 · 이분탐색 · 파라메트릭 서치 · DP(기본/카데인/LIS) · BFS/DFS · 멀티소스 BFS · 그래프 · 스택 · 투포인터 · 힙 · 누적합 · 유니온파인드 · 다익스트라 · 백트래킹 · 문자열 구현 / SQL 기본조회 · 조인 · 집계 · 서브쿼리 · 윈도우함수×2
+- **해설·암기 탭**: 유형 설명 → 왜 이 접근인가 → 주석 달린 모범 답안 → 예제 단계별 트레이스 → 함정 → 핵심 개념 → 함수·문법 사전(54항목, 비유 + 입력→출력 예시)
+- **암기 학습 흐름**: 답안 따라 치기 → 재현 모드(에디터 비우고 해설 덮기) → 제출 검증
+- **실전 Kit 탭**: 프로그래머스 고득점 Kit 47문제 링크·진행 체크 (백준이 2026-04 종료되어 교체)
+- **기록**: localStorage + JSON 백업 + GitHub Gist 동기화(토큰은 gist 권한만, 기기 저장은 선택제)
 
-파일 수정 후 [Netlify Deploys 페이지](https://app.netlify.com/projects/cote-trainer/deploys)에 이 폴더(또는 zip)를 드래그하면 끝.
+## 기술 선택 이유 (아키텍처)
+
+- **왜 서버가 없나**: 임의 코드 실행은 서버에선 보안(격리)·비용 문제가 크다. Pyodide(WASM)는
+  브라우저 샌드박스 안에서 도니 파일·네트워크 격리가 공짜이고, 정적 호스팅으로 배포가 끝난다.
+- **왜 Web Worker인가**: 사용자 코드가 무한루프여도 메인 스레드(UI)는 살아있어야 한다.
+  워커에서 실행하고 메인 스레드 타임아웃으로 `terminate()` — 이것이 무한루프 방어선.
+- **SQL 채점**: sql.js(SQLite WASM), 매 실행 새 인메모리 DB(상태 오염 없음), SELECT 단일 구문만 허용
+  (문자열 리터럴 마스킹 후 검사), 결과셋은 부동소수 허용오차 비교.
+- **시간 제한**: WASM이 네이티브보다 느려 문제 표기 제한의 ×3을 적용.
+
+## 개발·테스트
+
+```bash
+# 회귀 테스트 (문제 추가·수정 후 반드시)
+npm i sql.js
+node tests/verify.mjs           # SQL 가드·데이터 무결성·케이스 덤프
+python3 tests/verify_problems.py  # 전 문제 레퍼런스 정답 회귀
+python3 tests/sync_check.py       # 서버 버전과 공유 문제 동기화 검사
+```
+
+배포: 파일 수정 → GitHub 저장소(main)에 커밋 → GitHub Pages 자동 반영.
 
 ## 파일 구조
 
 ```
 index.html      # 레이아웃 (CDN: CodeMirror, marked, DOMPurify)
-app.js          # UI·채점 오케스트레이션·기록 저장
-problems.js     # 문제 5개 (성능 케이스는 함수로 생성)
+app.js          # UI·채점 오케스트레이션·기록·해설 렌더링
+problems.js     # 문제 29개 (대형 케이스는 생성 함수)
+solutions.js    # 문제별 해설 (유형·이유·주석 답안·함정)
+guide.js        # 개념·함수 사전·예제 트레이스
+kit.js          # 프로그래머스 고득점 Kit 목록
 py-worker.js    # Pyodide 채점 워커
 sql-worker.js   # sql.js 채점 워커
-style.css       # 다크 테마 + 모바일 레이아웃
-manifest.json   # PWA
+sw.js           # 서비스워커 (오프라인 캐시)
+tests/          # 회귀 테스트
 ```
 
-로컬 서버 버전(FastAPI)은 `../cote-trainer/`에 그대로 있음.
+로컬 서버 버전(FastAPI, 리소스 샌드박싱 시연용)은 `../cote-trainer/` — 보안 경계는 그쪽 README 참고.

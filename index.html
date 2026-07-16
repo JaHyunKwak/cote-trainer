@@ -120,8 +120,11 @@
       <b>GitHub Gist 동기화 (선택)</b>
       <p class="hint">github.com → Settings → Developer settings → Personal access tokens에서
         <code>gist</code> 권한만 준 토큰을 만들어 붙여넣으면 폰↔PC 기록이 합쳐집니다.</p>
-      <input type="password" id="gist-token" placeholder="GitHub 토큰 (ghp_...)" autocomplete="off">
+      <input type="password" id="gist-token" placeholder="GitHub 토큰 (gist 권한만 준 것)" autocomplete="off">
       <input type="text" id="gist-id" placeholder="Gist ID (비우면 자동 생성)" autocomplete="off">
+      <label class="hint" style="display:flex;gap:5px;align-items:center;margin-top:6px">
+        <input type="checkbox" id="gist-remember"> 이 기기에 토큰 저장 (공용 PC에서는 끄기)
+      </label>
       <div class="row">
         <button id="btn-sync">지금 동기화</button>
         <span id="sync-status" class="hint"></span>
